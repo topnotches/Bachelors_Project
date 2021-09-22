@@ -1,0 +1,26 @@
+<annotation>
+	<folder>TrainDataSet</folder>
+	<filename>001.jpg</filename>
+	<path>~/Bachelors_Project/YoloV3/data/voc2012_raw/VOCdevkit/VOC2012/JPEGImages001.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>227</width>
+		<height>227</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>Polyp</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>77</xmin>
+			<ymin>163</ymin>
+			<xmax>123</xmax>
+			<ymax>227</ymax>
+		</bndbox>
+	</object>
+</annotation>

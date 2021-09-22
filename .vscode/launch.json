@@ -1,0 +1,42 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+
+
+
+
+
+
+
+  //      python tools/voc2012.py \
+  //      --data_dir './data/voc2012_raw/VOCdevkit/VOC2012' \
+  //      --split train \
+  //      --output_file ./data/polyp_train.tfrecord \
+  //      --classes ./data/polyp.names
+  //    
+  //  python tools/voc2012.py \
+  //      --data_dir './data/voc2012_raw/VOCdevkit/VOC2012' \
+  //      --split val \
+  //      --output_file ./data/polyp_val.tfrecord \
+  //      --classes ./data/polyp.names
+
+    
+        
+  //python train.py --dataset ./data/polyp_train.tfrecord --val_dataset ./data/polyp_val.tfrecord --classes ./data/polyp.names --num_classes 1 --mode fit --transfer none --batch_size 16 --epochs 10 \
+
+
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "cwd": "${fileDirname}",
+            "console": "integratedTerminal",
+            "args": ["python", "train.py", "--dataset", "./data/voc2012_train.tfrecord", "--val_dataset", "./data/voc2012_val.tfrecord", "--classes", "./data/voc2012.names", "--num_classes", "20", "--mode", "eager_fit", "--transfer", "darknet", "--batch_size", "1", "--epochs", "1000", "--weights", "./checkpoints/yolov3_train_3.tf", "--weights_num_classes", "20"]
+        }
+    ]
+}
