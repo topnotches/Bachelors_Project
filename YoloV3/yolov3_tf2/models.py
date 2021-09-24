@@ -40,6 +40,7 @@ yolo_tiny_anchors = np.array([(10, 14), (23, 27), (37, 58),
 yolo_tiny_anchor_masks = np.array([[3, 4, 5], [0, 1, 2]])
 
 
+
 def DarknetConv(x, filters, size, strides=1, batch_norm=True):
     if strides == 1:
         padding = 'same'
@@ -236,7 +237,7 @@ def BotBlock(x, filters_in,filters_out, padding = 'same', strides = 1, expansion
 
 
     x_old = x
-    x = Conv2D(filters=filters_exp, kernel_size=(1,1),strides=(1,1), padding='same')(x)
+    x = Conv2D(filters=filters_exp, kernel_size=(1,1),strides=(1,1), padding='same',use_bias=False, kernel_regularizer=l2(0.0005))(x)
     x = BatchNormalization()(x)
     x = ReLU(6.0)(x)
     if strides == 1:
@@ -248,7 +249,9 @@ def BotBlock(x, filters_in,filters_out, padding = 'same', strides = 1, expansion
     x = DepthwiseConv2D((3,3), strides=strides, depth_multiplier=1, padding='valid')(x)
     x = BatchNormalization()(x)
     x = ReLU(6.0)(x)
-    x = Conv2D(filters=filters_out, kernel_size=(1,1), strides=(1,1), padding='same')(x)
+    x = Conv2D(filters=filters_out, kernel_size=(1,1),
+            strides=(1,1), padding='same',
+            use_bias=False, kernel_regularizer=l2(0.0005))(x)
     x = BatchNormalization()(x)
     if (add == True):
         x = Add()([x_old, x])
@@ -268,7 +271,7 @@ def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, 
 
     #MOBILENETV2
     x = ZeroPadding2D(((1, 0), (1, 0)))(x)  # top left half-padding
-    x = Conv2D(filters=32, kernel_size=(3,3), strides=(2,2), padding='valid', use_bias=False, kernel_regularizer='l2')(x)
+    x = Conv2D(filters=32, kernel_size=(3,3), strides=(2,2), padding='valid', use_bias=False, kernel_regularizer=l2(0.0005))(x)
     x = Bottleneck(x, t = 1, fin = 32, fout = 16, n = 1, s = 1)
     x = Bottleneck(x, t = 6, fin = 16, fout = 24, n = 2, s = 2)
     x = Bottleneck(x, t = 6, fin = 24, fout = 32, n = 3, s = 2)
@@ -277,7 +280,9 @@ def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, 
     x = Bottleneck(x, t = 6, fin = 96, fout = 160, n = 3, s = 2)
     x = Bottleneck(x, t = 6, fin = 160, fout = 320, n = 1, s = 1)
 
-    x = Conv2D(filters=1280, kernel_size=1, strides=1, padding='valid')(x)
+    x = Conv2D(filters=1280, kernel_size=1,
+        strides=1, padding='valid',
+        use_bias=False, kernel_regularizer=l2(0.0005))(x)
     x = BatchNormalization()(x)
     x = ReLU(6.0)(x)
 
@@ -384,9 +389,12 @@ def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
         obj_loss = obj_mask * obj_loss + \
             (1 - obj_mask) * ignore_mask * obj_loss
         # TODO: use binary_crossentropy instead
-        true_class_idx = tf.one_hot(indices = tf.cast(true_class_idx[...,0], tf.int32), depth = classes, on_value=1.0, off_value=0.0, dtype=tf.float32)
-        class_loss = obj_mask * binary_crossentropy(
-            true_class_idx, pred_class)
+        if classes == 1:
+            true_class_idx = tf.one_hot(indices = tf.cast(true_class_idx[...,0], tf.int32), depth = classes, on_value=1.0, off_value=0.0, dtype=tf.float32)
+            class_loss = obj_mask * binary_crossentropy(
+                true_class_idx, pred_class)
+        else:
+            class_loss = obj_mask * sparse_categorical_crossentropy(true_class_idx, pred_class)
 
         # 6. sum over (batch, gridx, gridy, anchors) => (batch, 1)
         xy_loss = tf.reduce_sum(xy_loss, axis=(1, 2, 3))
