@@ -49,7 +49,7 @@ def DarknetConv(x, filters, size, strides=1, batch_norm=True):
         padding = 'valid'
     x = Conv2D(filters=filters, kernel_size=size,
                strides=strides, padding=padding,
-               use_bias=not batch_norm, kernel_regularizer=l2(0.0005))(x)
+               use_bias=not batch_norm)(x)
     if batch_norm:
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.1)(x)
@@ -237,7 +237,7 @@ def BotBlock(x, filters_in,filters_out, padding = 'same', strides = 1, expansion
 
 
     x_old = x
-    x = Conv2D(filters=filters_exp, kernel_size=(1,1),strides=(1,1), padding='same',use_bias=False, kernel_regularizer=l2(0.0005))(x)
+    x = Conv2D(filters=filters_exp, kernel_size=(1,1),strides=(1,1), padding='same',use_bias=False)(x)
     x = BatchNormalization()(x)
     x = ReLU(6.0)(x)
     if strides == 1:
@@ -251,7 +251,7 @@ def BotBlock(x, filters_in,filters_out, padding = 'same', strides = 1, expansion
     x = ReLU(6.0)(x)
     x = Conv2D(filters=filters_out, kernel_size=(1,1),
             strides=(1,1), padding='same',
-            use_bias=False, kernel_regularizer=l2(0.0005))(x)
+            use_bias=False)(x)
     x = BatchNormalization()(x)
     if (add == True):
         x = Add()([x_old, x])
@@ -271,7 +271,7 @@ def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, 
 
     #MOBILENETV2
     x = ZeroPadding2D(((1, 0), (1, 0)))(x)  # top left half-padding
-    x = Conv2D(filters=32, kernel_size=(3,3), strides=(2,2), padding='valid', use_bias=False, kernel_regularizer=l2(0.0005))(x)
+    x = Conv2D(filters=32, kernel_size=(3,3), strides=(2,2), padding='valid', use_bias=False)(x)
     x = Bottleneck(x, t = 1, fin = 32, fout = 16, n = 1, s = 1)
     x = Bottleneck(x, t = 6, fin = 16, fout = 24, n = 2, s = 2)
     x = Bottleneck(x, t = 6, fin = 24, fout = 32, n = 3, s = 2)
@@ -282,12 +282,12 @@ def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, 
 
     x = Conv2D(filters=1280, kernel_size=1,
         strides=1, padding='valid',
-        use_bias=False, kernel_regularizer=l2(0.0005))(x)
+        use_bias=False)(x)
     x = BatchNormalization()(x)
     x = ReLU(6.0)(x)
 
     #HEAD FROM ORIGINAL PROJECT
-    #x = YoloConv(512, name='yolo_conv_0')(x)
+    x = YoloConv(512, name='yolo_conv_0')(x)
     output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
     
     return tf.keras.Model(inputs, output_0, name=name)
@@ -309,7 +309,7 @@ def YoloV3(size=None, channels=3, anchors=yolo_anchors,
         return Model(inputs, x, name='yolov3')
 
     boxes_0 = Lambda(lambda x: yolo_boxes(x, anchors[masks[0]], classes),
-                     name='yolo_boxes_0')(output_0)
+                     name='yolo_boxes_0')(x)
 
     outputs = Lambda(lambda x: yolo_nms(x, anchors, masks, classes),
                      name='yolo_nms')(boxes_0[:3])
