@@ -127,9 +127,9 @@ def main(_argv):
     train_dataset = train_dataset.shuffle(buffer_size=512)
     train_dataset = train_dataset.batch(FLAGS.batch_size)
         
-     #for batch, (images, labels) in enumerate(train_dataset):
-     #    a = dataset.transform_targets(labels, anchors, anchor_masks, FLAGS.size)
-        
+    #for batch, (images, labels) in enumerate(train_dataset):
+    #    a = dataset.transform_targets(labels, anchors, anchor_masks, FLAGS.size)
+    #    
     train_dataset = train_dataset.map(lambda x, y: (dataset.transform_images(x, FLAGS.size), dataset.transform_targets(y, anchors, anchor_masks, FLAGS.size)))
     train_dataset = train_dataset.prefetch(
         buffer_size=tf.data.experimental.AUTOTUNE)

@@ -35,9 +35,13 @@ flags.DEFINE_float('yolo_score_threshold', 0.5, 'score threshold')
 #                         (59, 119), (116, 90), (156, 198), (373, 326)],
 #                        np.float32) / 416
                         
-yolo_anchors = (np.array([(1, 1), (1, 1), (1, 1),(1, 1), (1, 1), (1, 1), (30, 30), (70, 70), (150, 150)],
-                        np.float32)) / 224
-yolo_anchor_masks = np.array([[6, 7, 8], [3, 4, 5], [0, 1, 2]])
+yolo_anchors = (np.array([(1, 1), (1, 1), (1, 1),(1, 1), (1, 1), (1, 1), (50, 50), (70, 70), (150, 150)],
+                       np.float32)) / 224
+
+#yolo_anchors = np.array([(10, 13), (33, 23), (62, 45), (116, 90), (156, 198), (373, 326),(1,1),(1,1)],
+#                        np.float32) / 416
+                        
+yolo_anchor_masks = np.array([[6,7,8], [3,4,5], [0,1,2]])
 yolo_tiny_anchors = np.array([(10, 14), (23, 27), (37, 58),
                               (81, 82), (135, 169),  (344, 319)],
                              np.float32) / 224
@@ -64,7 +68,7 @@ def BotBlock(x, filters_in,filters_out, padding = 'valid', strides = 1, expansio
             strides=1, padding='same',
             use_bias=False, kernel_regularizer='l2')(x)
     x = BatchNormalization()(x)
-    x = LeakyReLU(alpha=0.1)(x)
+    x = ReLU(6.0)(x)
     if strides == 1:
         x = ZeroPadding2D(1)(x)  
         padding = 'valid'
@@ -73,7 +77,7 @@ def BotBlock(x, filters_in,filters_out, padding = 'valid', strides = 1, expansio
         padding = 'valid'
     x = DepthwiseConv2D(kernel_size=3, strides=strides, padding=padding, use_bias=False, kernel_regularizer='l2')(x)
     x = BatchNormalization()(x)
-    x = LeakyReLU(alpha=0.1)(x)
+    x = ReLU(6.0)(x)
     x = Conv2D(filters=filters_out, kernel_size=1,
         strides=1, padding='same',
         use_bias=False, kernel_regularizer='l2')(x)
@@ -85,10 +89,9 @@ def BotBlock(x, filters_in,filters_out, padding = 'valid', strides = 1, expansio
 def Bottleneck(x,fin,fout,s,n,t):
     
 
-    x = BotBlock(x, filters_in = fin,filters_out = fin, strides = s, expansion = t)
-
+    x = BotBlock(x, filters_in = fin,filters_out = fout, strides = s, expansion = t)
     for _ in range(1, n):
-        x = BotBlock(x, filters_in = fin, filters_out = fin, strides = 1, expansion = t, add = True)
+        x = BotBlock(x, filters_in = fout, filters_out = fout, strides = 1, expansion = t, add = True)
     return x
     
 
@@ -212,7 +215,7 @@ def YoloOutput(filters, anchors, classes, name=None):
 # As tensorflow lite doesn't support tf.size used in tf.meshgrid, 
 # we reimplemented a simple meshgrid function that use basic tf function.
 def _meshgrid(n_a, n_b):
-
+    
     return [
         tf.reshape(tf.tile(tf.range(n_a), [n_b]), (n_b, n_a)),
         tf.reshape(tf.repeat(tf.range(n_b), n_a), (n_b, n_a))
@@ -292,33 +295,37 @@ def yolo_nms(outputs, anchors, masks, classes):
     valid_detections = tf.expand_dims(valid_detections, axis=0)
 
     return boxes, scores, classes, valid_detections
+
+
+
+
+
 def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, classes=80):
     x = inputs = Input([None, None, 3])
 
-
+    #MOBILENETV2
     x = ZeroPadding2D(((1, 0), (1, 0)))(x)  # top left half-padding
     x = Conv2D(filters=32, kernel_size=3,
             strides=2, padding='valid',
             use_bias=False, kernel_regularizer='l2')(x)
-    x = Bottleneck(x, t = 1,fin = 32, fout = 16, n = 1, s = 1)
-    x = Bottleneck(x, t = 6,fin = 16, fout = 24, n = 1, s = 2)
-    x = Bottleneck(x, t = 6,fin = 24, fout = 32, n = 2, s = 2)
-    x = Bottleneck(x, t = 6,fin = 32, fout = 64, n = 3, s = 2)
-    x = Bottleneck(x, t = 6,fin = 64, fout = 96, n = 4, s = 1)
-    x = Bottleneck(x, t = 6,fin = 96, fout = 160, n = 3, s = 2)
-    x = Bottleneck(x, t = 6,fin = 160, fout = 320, n = 3, s = 1)
-
-    x = Conv2D(filters=1280, kernel_size=1,
-        strides=1, padding='same',
+    x = Bottleneck(x, t = 1, fin = 32, fout = 16, n = 1, s = 1)
+    x = Bottleneck(x, t = 6, fin = 16, fout = 24, n = 1, s = 2)
+    x = Bottleneck(x, t = 6, fin = 24, fout = 32, n = 2, s = 2)
+    x = Bottleneck(x, t = 6, fin = 32, fout = 64, n = 3, s = 2)
+    x = Bottleneck(x, t = 6, fin = 64, fout = 96, n = 4, s = 1)
+    x = Bottleneck(x, t = 6, fin = 96, fout = 160, n = 3, s = 2)
+    x = Bottleneck(x, t = 6, fin = 160, fout = 320, n = 3, s = 1)
+    x = ZeroPadding2D(1)(x)  
+    x = Conv2D(filters=1280, kernel_size=3,
+        strides=1, padding='valid',
         use_bias=False, kernel_regularizer='l2')(x)
     x = BatchNormalization()(x)
-    x = LeakyReLU(alpha=0.1)(x)
+    x = ReLU(6.0)(x)
 
-
+    #HEAD FROM ORIGINAL PROJECT
     x = YoloConv(512, name='yolo_conv_0')(x)
-    
-    
     output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
+
     return tf.keras.Model(inputs, output_0, name=name)
 
 
@@ -443,32 +450,23 @@ def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
             tf.reduce_sum(tf.square(true_xy - pred_xy), axis=-1)
         wh_loss = obj_mask * box_loss_scale * \
             tf.reduce_sum(tf.square(true_wh - pred_wh), axis=-1)
-
-      
         obj_loss = binary_crossentropy(true_obj, pred_obj)
         obj_loss = obj_mask * obj_loss + \
             (1 - obj_mask) * ignore_mask * obj_loss
-        # TODO: use binary_crossentropy instead
-  
+        #todo BINARY CROSSENTROPY
+
         if classes == 1:
             true_class_idx = tf.one_hot(indices = tf.cast(true_class_idx[...,0], tf.int32), depth = classes, on_value=1.0, off_value=0.0, dtype=tf.float32)
-            class_loss = obj_mask*binary_crossentropy(
+            class_loss = obj_mask * binary_crossentropy(
                 true_class_idx, pred_class)
         else:
-            class_loss = obj_mask * sparse_categorical_crossentropy(
-                true_class_idx, pred_class)
-
-
-
+            class_loss = obj_mask * sparse_categorical_crossentropy(true_class_idx, pred_class)
 
         # 6. sum over (batch, gridx, gridy, anchors) => (batch, 1)
         xy_loss = tf.reduce_sum(xy_loss, axis=(1, 2, 3))
         wh_loss = tf.reduce_sum(wh_loss, axis=(1, 2, 3))
         obj_loss = tf.reduce_sum(obj_loss, axis=(1, 2, 3))
         class_loss = tf.reduce_sum(class_loss, axis=(1, 2, 3))
-        #print("\nxy: "+str(tf.reduce_mean(xy_loss)))
-        #print("wh: "+str(tf.reduce_mean(wh_loss)))
-        #print("obj: "+str(tf.reduce_mean(obj_loss)))
-        #print("class: "+str(tf.reduce_mean(class_loss)))
+
         return xy_loss + wh_loss + obj_loss + class_loss
     return yolo_loss
