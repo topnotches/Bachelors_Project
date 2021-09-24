@@ -7,11 +7,10 @@ from tensorflow.keras.layers import (
     Add,
     Concatenate,
     Conv2D,
-    Conv1D,
-    DepthwiseConv2D,
     Input,
-    ReLU,
+    DepthwiseConv2D,
     Lambda,
+    ReLU,
     LeakyReLU,
     MaxPool2D,
     UpSampling2D,
@@ -30,75 +29,15 @@ flags.DEFINE_integer('yolo_max_boxes', 100,
 flags.DEFINE_float('yolo_iou_threshold', 0.5, 'iou threshold')
 flags.DEFINE_float('yolo_score_threshold', 0.5, 'score threshold')
 
-
-#yolo_anchors = np.array([(10, 13), (16, 30), (33, 23), (30, 61), (62, 45),
-#                         (59, 119), (116, 90), (156, 198), (373, 326)],
-#                        np.float32) / 416
-                        
 yolo_anchors = (np.array([(1, 1), (1, 1), (1, 1),(1, 1), (1, 1), (1, 1), (50, 50), (70, 70), (150, 150)],
                        np.float32)) / 224
 
-#yolo_anchors = np.array([(10, 13), (33, 23), (62, 45), (116, 90), (156, 198), (373, 326),(1,1),(1,1)],
-#                        np.float32) / 416
-                        
-yolo_anchor_masks = np.array([[6,7,8], [3,4,5], [0,1,2]])
+yolo_anchor_masks = np.array([[6, 7, 8], [3, 4, 5], [0, 1, 2]])
+
 yolo_tiny_anchors = np.array([(10, 14), (23, 27), (37, 58),
                               (81, 82), (135, 169),  (344, 319)],
-                             np.float32) / 224
+                             np.float32) / 416
 yolo_tiny_anchor_masks = np.array([[3, 4, 5], [0, 1, 2]])
-
-def MoNetConv(x, filters, kernel_size, strides=(1, 1), padding='valid', depth_multiplier=1, data_format=None, dilation_rate=(1, 1), activation=None, use_bias=True, depthwise_initializer='glorot_uniform', bias_initializer='zeros', depthwise_regularizer=None, bias_regularizer=None, activity_regularizer=None, depthwise_constraint=None, bias_constraint=None, batch_norm = True, **kwargs):
-    x = DepthwiseConv2D(kernel_size=kernel_size, strides=strides, padding=padding, use_bias=not batch_norm, kernel_regularizer='l2')(x)
-    x = BatchNormalization()(x)
-    x = LeakyReLU(alpha=0.1)(x)
-    
-    x = Conv2D(filters=filters, kernel_size=1,
-               strides=1, padding=padding,
-               use_bias=not batch_norm, kernel_regularizer='l2')(x)
-    x = BatchNormalization()(x)
-    x = LeakyReLU(alpha=0.1)(x)
-    return x
-
-def BotBlock(x, filters_in,filters_out, padding = 'valid', strides = 1, expansion = 1, add = False, cheatcodes = False):
-    filters_exp = filters_in*expansion
-
-
-    x_old = x
-    x = Conv2D(filters=filters_exp, kernel_size=1,
-            strides=1, padding='same',
-            use_bias=False, kernel_regularizer='l2')(x)
-    x = BatchNormalization()(x)
-    x = ReLU(6.0)(x)
-    if strides == 1:
-        x = ZeroPadding2D(1)(x)  
-        padding = 'valid'
-    else:
-        x = ZeroPadding2D(((1, 0), (1, 0)))(x)  
-        padding = 'valid'
-    x = DepthwiseConv2D(kernel_size=3, strides=strides, padding=padding, use_bias=False, kernel_regularizer='l2')(x)
-    x = BatchNormalization()(x)
-    x = ReLU(6.0)(x)
-    x = Conv2D(filters=filters_out, kernel_size=1,
-        strides=1, padding='same',
-        use_bias=False, kernel_regularizer='l2')(x)
-    x = BatchNormalization()(x)
-    if (add == True):
-        x = Add()([x_old, x])
-    return x
-
-def Bottleneck(x,fin,fout,s,n,t):
-    
-
-    x = BotBlock(x, filters_in = fin,filters_out = fout, strides = s, expansion = t)
-    for _ in range(1, n):
-        x = BotBlock(x, filters_in = fout, filters_out = fout, strides = 1, expansion = t, add = True)
-    return x
-    
-
-
-
-
-
 
 
 def DarknetConv(x, filters, size, strides=1, batch_norm=True):
@@ -109,11 +48,12 @@ def DarknetConv(x, filters, size, strides=1, batch_norm=True):
         padding = 'valid'
     x = Conv2D(filters=filters, kernel_size=size,
                strides=strides, padding=padding,
-               use_bias=not batch_norm, kernel_regularizer='l2')(x)
+               use_bias=not batch_norm, kernel_regularizer=l2(0.0005))(x)
     if batch_norm:
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.1)(x)
     return x
+
 
 def DarknetResidual(x, filters):
     prev = x
@@ -199,7 +139,6 @@ def YoloConvTiny(filters, name=None):
     return yolo_conv
 
 
-
 def YoloOutput(filters, anchors, classes, name=None):
     def yolo_output(x_in):
         x = inputs = Input(x_in.shape[1:])
@@ -211,11 +150,10 @@ def YoloOutput(filters, anchors, classes, name=None):
     return yolo_output
 
 
-
 # As tensorflow lite doesn't support tf.size used in tf.meshgrid, 
 # we reimplemented a simple meshgrid function that use basic tf function.
 def _meshgrid(n_a, n_b):
-    
+
     return [
         tf.reshape(tf.tile(tf.range(n_a), [n_b]), (n_b, n_a)),
         tf.reshape(tf.repeat(tf.range(n_b), n_a), (n_b, n_a))
@@ -251,7 +189,6 @@ def yolo_boxes(pred, anchors, classes):
 def yolo_nms(outputs, anchors, masks, classes):
     # boxes, conf, type
     b, c, t = [], [], []
-
     o = outputs
     b.append(tf.reshape(o[0], (tf.shape(o[0])[0], -1, tf.shape(o[0])[-1])))
     c.append(tf.reshape(o[1], (tf.shape(o[1])[0], -1, tf.shape(o[1])[-1])))
@@ -260,15 +197,13 @@ def yolo_nms(outputs, anchors, masks, classes):
     bbox = tf.concat(b, axis=1)
     confidence = tf.concat(c, axis=1)
     class_probs = tf.concat(t, axis=1)
-    #print("confidence: " + str(confidence))
-    #print("class_probs: " + str(class_probs))
+
     scores = confidence * class_probs
 
     dscores = tf.squeeze(scores, axis=0)
-    
-    scores = tf.reduce_max(dscores, [1])
-    bbox = tf.reshape(bbox, (-1, 4))
-    classes = tf.argmax(dscores, 1)
+    scores = tf.reduce_max(dscores,[1])
+    bbox = tf.reshape(bbox,(-1,4))
+    classes = tf.argmax(dscores,1)
     selected_indices, selected_scores = tf.image.non_max_suppression_with_scores(
         boxes=bbox,
         scores=scores,
@@ -277,109 +212,104 @@ def yolo_nms(outputs, anchors, masks, classes):
         score_threshold=FLAGS.yolo_score_threshold,
         soft_nms_sigma=0.5
     )
-
+    
     num_valid_nms_boxes = tf.shape(selected_indices)[0]
 
-    selected_indices = tf.concat([selected_indices, tf.zeros(
-        FLAGS.yolo_max_boxes-num_valid_nms_boxes, tf.int32)], 0)
-    selected_scores = tf.concat([selected_scores, tf.zeros(
-        FLAGS.yolo_max_boxes-num_valid_nms_boxes, tf.float32)], -1)
+    selected_indices = tf.concat([selected_indices,tf.zeros(FLAGS.yolo_max_boxes-num_valid_nms_boxes, tf.int32)], 0)
+    selected_scores = tf.concat([selected_scores,tf.zeros(FLAGS.yolo_max_boxes-num_valid_nms_boxes,tf.float32)], -1)
 
-    boxes = tf.gather(bbox, selected_indices)
+    boxes=tf.gather(bbox, selected_indices)
     boxes = tf.expand_dims(boxes, axis=0)
-    scores = selected_scores
+    scores=selected_scores
     scores = tf.expand_dims(scores, axis=0)
-    classes = tf.gather(classes, selected_indices)
+    classes = tf.gather(classes,selected_indices)
     classes = tf.expand_dims(classes, axis=0)
-    valid_detections = num_valid_nms_boxes
+    valid_detections=num_valid_nms_boxes
     valid_detections = tf.expand_dims(valid_detections, axis=0)
 
     return boxes, scores, classes, valid_detections
 
 
 
+def BotBlock(x, filters_in,filters_out, padding = 'same', strides = 1, expansion = 1, add = False, cheatcodes = False):
+    filters_exp = filters_in*expansion
 
 
+    x_old = x
+    x = Conv2D(filters=filters_exp, kernel_size=(1,1),strides=(1,1), padding='same')(x)
+    x = BatchNormalization()(x)
+    x = ReLU(6.0)(x)
+    if strides == 1:
+        x = ZeroPadding2D(1)(x)  
+        padding = 'valid'
+    else:
+        x = ZeroPadding2D(((1, 0), (1, 0)))(x)  
+        padding = 'valid'    
+    x = DepthwiseConv2D((3,3), strides=strides, depth_multiplier=1, padding='valid')(x)
+    x = BatchNormalization()(x)
+    x = ReLU(6.0)(x)
+    x = Conv2D(filters=filters_out, kernel_size=(1,1), strides=(1,1), padding='same')(x)
+    x = BatchNormalization()(x)
+    if (add == True):
+        x = Add()([x_old, x])
+    return x
+
+def Bottleneck(x,fin,fout,s,n,t):
+    x = BotBlock(x, filters_in = fin,filters_out = fout, strides = s, expansion = t)
+    for _ in range(1, n):
+        x = BotBlock(x, filters_in = fout, filters_out = fout, strides = 1, expansion = t, add = True)
+    return x
+    
+
+
+    
 def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, classes=80):
     x = inputs = Input([None, None, 3])
 
     #MOBILENETV2
     x = ZeroPadding2D(((1, 0), (1, 0)))(x)  # top left half-padding
-    x = Conv2D(filters=32, kernel_size=3,
-            strides=2, padding='valid',
-            use_bias=False, kernel_regularizer='l2')(x)
+    x = Conv2D(filters=32, kernel_size=(3,3), strides=(2,2), padding='valid', use_bias=False, kernel_regularizer='l2')(x)
     x = Bottleneck(x, t = 1, fin = 32, fout = 16, n = 1, s = 1)
-    x = Bottleneck(x, t = 6, fin = 16, fout = 24, n = 1, s = 2)
-    x = Bottleneck(x, t = 6, fin = 24, fout = 32, n = 2, s = 2)
-    x = Bottleneck(x, t = 6, fin = 32, fout = 64, n = 3, s = 2)
-    x = Bottleneck(x, t = 6, fin = 64, fout = 96, n = 4, s = 1)
+    x = Bottleneck(x, t = 6, fin = 16, fout = 24, n = 2, s = 2)
+    x = Bottleneck(x, t = 6, fin = 24, fout = 32, n = 3, s = 2)
+    x = Bottleneck(x, t = 6, fin = 32, fout = 64, n = 4, s = 2)
+    x = Bottleneck(x, t = 6, fin = 64, fout = 96, n = 3, s = 1)
     x = Bottleneck(x, t = 6, fin = 96, fout = 160, n = 3, s = 2)
-    x = Bottleneck(x, t = 6, fin = 160, fout = 320, n = 3, s = 1)
-    x = ZeroPadding2D(1)(x)  
-    x = Conv2D(filters=1280, kernel_size=3,
-        strides=1, padding='valid',
-        use_bias=False, kernel_regularizer='l2')(x)
+    x = Bottleneck(x, t = 6, fin = 160, fout = 320, n = 1, s = 1)
+
+    x = Conv2D(filters=1280, kernel_size=1, strides=1, padding='valid')(x)
     x = BatchNormalization()(x)
     x = ReLU(6.0)(x)
 
     #HEAD FROM ORIGINAL PROJECT
-    x = YoloConv(512, name='yolo_conv_0')(x)
+    #x = YoloConv(512, name='yolo_conv_0')(x)
     output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
-
+    
     return tf.keras.Model(inputs, output_0, name=name)
+
 
 
 def YoloV3(size=None, channels=3, anchors=yolo_anchors,
            masks=yolo_anchor_masks, classes=80, training=False):
     x = inputs = Input([size, size, channels], name='input')
 
-    x = MobilenetV2(name='yolo_darknet', masks = masks, anchors = anchors, classes = classes)(x)
     #x_36, x_61, x = Darknet(name='yolo_darknet')(x)
+    #
     #x = YoloConv(512, name='yolo_conv_0')(x)
     #output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
 
-
-
+    x = MobilenetV2(name='yolo_darknet', masks = masks, anchors = anchors, classes = classes)(x)
+            
     if training:
         return Model(inputs, x, name='yolov3')
 
     boxes_0 = Lambda(lambda x: yolo_boxes(x, anchors[masks[0]], classes),
-                     name='yolo_boxes_0')(x)
+                     name='yolo_boxes_0')(output_0)
 
-    outputs = Lambda(lambda x: yolo_nms(x, anchors, masks[0], classes),
-                     name='yolo_nms')((boxes_0[:3]))
+    outputs = Lambda(lambda x: yolo_nms(x, anchors, masks, classes),
+                     name='yolo_nms')(boxes_0[:3])
+
     return Model(inputs, outputs, name='yolov3')
-
-    
-#def YoloV3(size=None, channels=3, anchors=yolo_anchors,
-#           masks=yolo_anchor_masks, classes=80, training=False):
-#    x = inputs = Input([size, size, channels], name='input')
-#
-#    x_36, x_61, x = Darknet(name='yolo_darknet')(x)
-#
-#    x = YoloConv(512, name='yolo_conv_0')(x)
-#    output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
-#
-#    x = YoloConv(256, name='yolo_conv_1')((x, x_61))
-#    output_1 = YoloOutput(256, len(masks[1]), classes, name='yolo_output_1')(x)
-#
-#    x = YoloConv(128, name='yolo_conv_2')((x, x_36))
-#    output_2 = YoloOutput(128, len(masks[2]), classes, name='yolo_output_2')(x)
-#
-#    if training:
-#        return Model(inputs, (output_0, output_1, output_2), name='yolov3')
-#
-#    boxes_0 = Lambda(lambda x: yolo_boxes(x, anchors[masks[0]], classes),
-#                     name='yolo_boxes_0')(output_0)
-#    boxes_1 = Lambda(lambda x: yolo_boxes(x, anchors[masks[1]], classes),
-#                     name='yolo_boxes_1')(output_1)
-#    boxes_2 = Lambda(lambda x: yolo_boxes(x, anchors[masks[2]], classes),
-#                     name='yolo_boxes_2')(output_2)
-#
-#    outputs = Lambda(lambda x: yolo_nms(x, anchors, masks, classes),
-#                     name='yolo_nms')((boxes_0[:3], boxes_1[:3], boxes_2[:3]))
-#
-#    return Model(inputs, outputs, name='yolov3')
 
 
 def YoloV3Tiny(size=None, channels=3, anchors=yolo_tiny_anchors,
@@ -453,14 +383,10 @@ def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
         obj_loss = binary_crossentropy(true_obj, pred_obj)
         obj_loss = obj_mask * obj_loss + \
             (1 - obj_mask) * ignore_mask * obj_loss
-        #todo BINARY CROSSENTROPY
-
-        if classes == 1:
-            true_class_idx = tf.one_hot(indices = tf.cast(true_class_idx[...,0], tf.int32), depth = classes, on_value=1.0, off_value=0.0, dtype=tf.float32)
-            class_loss = obj_mask * binary_crossentropy(
-                true_class_idx, pred_class)
-        else:
-            class_loss = obj_mask * sparse_categorical_crossentropy(true_class_idx, pred_class)
+        # TODO: use binary_crossentropy instead
+        true_class_idx = tf.one_hot(indices = tf.cast(true_class_idx[...,0], tf.int32), depth = classes, on_value=1.0, off_value=0.0, dtype=tf.float32)
+        class_loss = obj_mask * binary_crossentropy(
+            true_class_idx, pred_class)
 
         # 6. sum over (batch, gridx, gridy, anchors) => (batch, 1)
         xy_loss = tf.reduce_sum(xy_loss, axis=(1, 2, 3))
