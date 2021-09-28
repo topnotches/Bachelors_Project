@@ -53,7 +53,7 @@ def DarknetConv(x, filters, size, strides=1, batch_norm=True):
                use_bias=not batch_norm)(x)
     if batch_norm:
         x = BatchNormalization()(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = ReLU(6.0)(x)
     return x
 
 
@@ -146,8 +146,7 @@ def YoloOutput(filters, anchors, classes, name=None):
         x = inputs = Input(x_in.shape[1:])
         x = DarknetConv(x, filters * 2, 3)
         x = DarknetConv(x, anchors * (classes + 5), 1, batch_norm=False)
-        x = Lambda(lambda x: tf.reshape(x, (-1, tf.shape(x)[1], tf.shape(x)[2],
-                                            anchors, classes + 5)))(x)
+        x = tf.keras.layers.Reshape((7, 7, anchors, classes + 5))(x)
         return tf.keras.Model(inputs, x, name=name)(x_in)
     return yolo_output
 
