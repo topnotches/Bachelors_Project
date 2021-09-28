@@ -280,17 +280,19 @@ def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, 
     x = Bottleneck(x, t = 6, fin = 96, fout = 160, n = 3, s = 2)
     x = Bottleneck(x, t = 6, fin = 160, fout = 320, n = 1, s = 1)
 
-    x = Conv2D(filters=1280, kernel_size=1,
-        strides=1, padding='valid',
-        use_bias=False)(x)
+    x = Conv2D(filters=1280, kernel_size=1, strides=1, padding='same', use_bias=False)(x)
+
+    x = ZeroPadding2D(1)(x)  
+    x = Conv2D(filters=512, kernel_size=3, strides=1, padding='valid', use_bias=False)(x)
     x = BatchNormalization()(x)
     x = ReLU(6.0)(x)
-
+    x = Conv2D(filters=len(masks[0]) * (classes + 5), kernel_size=1, strides=1, padding='same', use_bias=False)(x)
     #HEAD FROM ORIGINAL PROJECT
-    x = YoloConv(512, name='yolo_conv_0')(x)
-    output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
+    #x = YoloConv(512, name='yolo_conv_0')(x)
+    #output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
     
-    return tf.keras.Model(inputs, output_0, name=name)
+    x = tf.keras.layers.Reshape((7, 7, len(masks[0]), classes + 5))(x)
+    return tf.keras.Model(inputs, x, name=name)
 
 
 
