@@ -23,6 +23,7 @@ def main(_argv):
 
     quantizer = vitis_quantize.VitisQuantizer(float_model)
     quantized_model = quantizer.quantize_model(calib_dataset=val_dataset)
+    print(quantized_model.output_shape)
     quantized_model.save('quantized_model.h5')
 
 if __name__ == '__main__':

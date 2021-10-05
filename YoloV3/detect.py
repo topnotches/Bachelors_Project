@@ -50,7 +50,8 @@ def main(_argv):
         img = transform_images(img, FLAGS.size)
 
         t1 = time.time()
-        boxes, scores, classes, nums = yolo(img)
+        res = yolo(img)
+        print(res[0][6][3][5])
         t2 = time.time()
         logging.info('time: {}'.format(t2 - t1))
 

@@ -291,7 +291,7 @@ def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, 
     #x = YoloConv(512, name='yolo_conv_0')(x)
     #output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
     
-    x = tf.keras.layers.Reshape((7, 7, len(masks[0]), classes + 5))(x)
+    x = tf.keras.layers.Reshape((7, 7, 54))(x)
     return tf.keras.Model(inputs, x, name=name)
 
 
@@ -307,6 +307,7 @@ def YoloV3(size=None, channels=3, anchors=yolo_anchors,
 
     x = MobilenetV2(name='yolo_darknet', masks = masks, anchors = anchors, classes = classes)(x)
             
+    x = tf.keras.layers.Reshape((7, 7, len(masks[0]), classes + 5))(x)
     if training:
         return Model(inputs, x, name='yolov3')
 
@@ -316,7 +317,7 @@ def YoloV3(size=None, channels=3, anchors=yolo_anchors,
     outputs = Lambda(lambda x: yolo_nms(x, anchors, masks, classes),
                      name='yolo_nms')(boxes_0[:3])
 
-    return Model(inputs, outputs, name='yolov3')
+    return Model(inputs, x, name='yolov3')
 
 
 def YoloV3Tiny(size=None, channels=3, anchors=yolo_tiny_anchors,

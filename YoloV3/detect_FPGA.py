@@ -129,10 +129,11 @@ def main(_argv):
         boxes_0 = Lambda(lambda x: yolo_boxes(x, yolo_anchors[yolo_anchor_masks[0]], 1),
                     name='yolo_boxes_0')(outputData)
 
-        boxes, scores, classes, nums = Lambda(lambda x: yolo_nms(x, yolo_anchors, yolo_anchor_masks, 1), name='yolo_nms')(boxes_0[:3])
+        boxes, scores, classes, nums = Lambda(lambda x: yolo_nms(x, yolo_anchors, yolo_anchor_masks, 1),
+                            name='yolo_nms')(boxes_0[:3])
 
+        boxes, scores, classes, nums = yolo(img)
         t2 = time.time()
-
         logging.info('time: {}'.format(t2 - t1))
 
         logging.info('detections:')
