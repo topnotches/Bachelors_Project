@@ -1,7 +1,7 @@
 <annotation>
 	<folder>TrainDataSet</folder>
 	<filename>001.jpg</filename>
-	<path>~/Bachelors_Project/YoloV3/data/voc2012_raw/VOCdevkit/VOC2012/JPEGImages001.jpg</path>
+	<path>~/Vitis-AI/Bachelors_Project/YoloV3/data/voc2012_raw/VOCdevkit/VOC2012/JPEGImages/001.jpg</path>
 	<source>
 		<database>Unknown</database>
 	</source>
@@ -12,7 +12,7 @@
 	</size>
 	<segmented>0</segmented>
 	<object>
-		<name>Polyp</name>
+		<name>polyp</name>
 		<pose>Unspecified</pose>
 		<truncated>0</truncated>
 		<difficult>0</difficult>

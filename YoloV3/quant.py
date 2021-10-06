@@ -4,7 +4,7 @@ from yolov3_tf2.models import *
 
 import yolov3_tf2.dataset as dataset
 
-from tensorflow_model_optimization.quantization.keras import vitis_quantize
+#from tensorflow_model_optimization.quantization.keras import vitis_quantize
 
 def main(_argv):
 
@@ -21,10 +21,10 @@ def main(_argv):
     val_dataset = val_dataset.batch(1)
     val_dataset = val_dataset.map(lambda x, y: (dataset.transform_images(x, 224),dataset.transform_targets(y, yolo_anchors, yolo_anchor_masks, 224)))
 
-    quantizer = vitis_quantize.VitisQuantizer(float_model)
-    quantized_model = quantizer.quantize_model(calib_dataset=val_dataset)
-    print(quantized_model.output_shape)
-    quantized_model.save('quantized_model.h5')
+    #quantizer = vitis_quantize.VitisQuantizer(float_model)
+    #quantized_model = quantizer.quantize_model(calib_dataset=val_dataset)
+    #print(quantized_model.output_shape)
+    #quantized_model.save('quantized_model.h5')
 
 if __name__ == '__main__':
     try:

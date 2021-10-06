@@ -4,10 +4,9 @@ from absl.flags import FLAGS
 import cv2
 import numpy as np
 import tensorflow as tf
-from yolov3_tf2.models import (
-    YoloV3, YoloV3Tiny
-)
+from yolov3_tf2.models import *
 from yolov3_tf2.dataset import transform_images, load_tfrecord_dataset
+
 from yolov3_tf2.utils import draw_outputs
 
 flags.DEFINE_string('classes', './data/coco.names', 'path to classes file')
@@ -31,6 +30,8 @@ def main(_argv):
     else:
         yolo = YoloV3(classes=FLAGS.num_classes)
 
+    float_model = tf.keras.models.load_model('new_model.h5', custom_objects= {'tf':tf})
+
     yolo.load_weights(FLAGS.weights).expect_partial()
     logging.info('weights loaded')
 
@@ -50,8 +51,8 @@ def main(_argv):
         img = transform_images(img, FLAGS.size)
 
         t1 = time.time()
-        res = yolo(img)
-        print(res[0][6][3][5])
+        res = float_model(img)
+        print(res[0][6][4][5*6:5*6+6])
         t2 = time.time()
         logging.info('time: {}'.format(t2 - t1))
 
