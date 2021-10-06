@@ -19,7 +19,6 @@ flags.DEFINE_string('tfrecord', None, 'tfrecord instead of image')
 flags.DEFINE_string('output', './output.jpg', 'path to output image')
 flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
 
-
 def main(_argv):
     physical_devices = tf.config.experimental.list_physical_devices('GPU')
     for physical_device in physical_devices:
@@ -51,8 +50,8 @@ def main(_argv):
         img = transform_images(img, FLAGS.size)
 
         t1 = time.time()
-        res = float_model(img)
-        print(res[0][6][4][5*6:5*6+6])
+        res = yolo(img)
+        print(res[0][6][3][5*6:5*6+6])
         t2 = time.time()
         logging.info('time: {}'.format(t2 - t1))
 
