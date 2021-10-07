@@ -14,6 +14,8 @@ from tensorflow.python.framework import tensor_spec
 from tensorflow.python.util import nest
 
 from tensorflow.keras.models import save_model, Sequential
+from tensorflow.keras.layers import Input
+from tensorflow.keras.models import Model
 flags.DEFINE_string('weights', './checkpoints/yolov3.tf',
                     'path to weights file')
 flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
@@ -35,6 +37,13 @@ def main(_argv):
     yolo_net = yolo.get_layer('yolo_darknet')
     print(yolo_net.output_shape)
     save_model(yolo_net, 'new_model.h5', save_format='h5')
+
+
+    newInput = Input(batch_shape=(1,224,224,3))
+    newOutputs = yolo(newInput)
+    newModel = Model(newInput,newOutputs)
+    tf.saved_model.save(newModel, FLAGS.output)
+
     #logging.info("model saved to: {}".format(FLAGS.output))
 
     #model = tf.saved_model.load(FLAGS.output)

@@ -29,8 +29,11 @@ def main(_argv):
     else:
         yolo = YoloV3(classes=FLAGS.num_classes)
 
-    float_model = tf.keras.models.load_model('new_model.h5', custom_objects= {'tf':tf})
+    #float_model = tf.keras.models.load_model('new_model.h5', custom_objects= {'tf':tf})
+    converter = tf.lite.TFLiteConverter.from_saved_model('./serving/yolov3/1')
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
+    float_model = converter.convert()
     yolo.load_weights(FLAGS.weights).expect_partial()
     logging.info('weights loaded')
 
@@ -50,7 +53,7 @@ def main(_argv):
         img = transform_images(img, FLAGS.size)
 
         t1 = time.time()
-        res = yolo(img)
+        res = float_model(img)
         print(res[0][6][3][5*6:5*6+6])
         t2 = time.time()
         logging.info('time: {}'.format(t2 - t1))
