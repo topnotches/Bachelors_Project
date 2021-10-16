@@ -1,0 +1,1 @@
+/home/root/Vitis-AI/demo/VART/resnet50/res.jpg

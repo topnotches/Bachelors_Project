@@ -18,11 +18,11 @@ def main(_argv):
 
     val_dataset = dataset.load_tfrecord_dataset('./data/voc2012_val.tfrecord', './data/voc2012.names', 224)
 
-    val_dataset = val_dataset.batch(16)
+    val_dataset = val_dataset.batch(8)
     val_dataset = val_dataset.map(lambda x, y: (dataset.transform_images(x, 224),dataset.transform_targets(y, yolo_anchors, yolo_anchor_masks, 224)))
 
     quantizer = vitis_quantize.VitisQuantizer(float_model)
-    quantized_model = quantizer.quantize_model(calib_dataset=val_dataset)#, calib_batch_size=16, include_fast_ft=True,fast_ft_epochs=1)
+    quantized_model = quantizer.quantize_model(calib_dataset=val_dataset, calib_batch_size=8, include_fast_ft=True, fast_ft_epochs=10)
     print(quantized_model.output_shape)
     quantized_model.save('quantized_model.h5')
 

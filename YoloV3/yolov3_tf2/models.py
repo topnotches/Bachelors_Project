@@ -26,8 +26,8 @@ from .utils import broadcast_iou
 
 flags.DEFINE_integer('yolo_max_boxes', 100,
                      'maximum number of boxes per image')
-flags.DEFINE_float('yolo_iou_threshold', 0.5, 'iou threshold')
-flags.DEFINE_float('yolo_score_threshold', 0.5, 'score threshold')
+flags.DEFINE_float('yolo_iou_threshold', 0.4, 'iou threshold')
+flags.DEFINE_float('yolo_score_threshold', 0.4, 'score threshold')
 
 
 yolo_anchors = np.array([(10, 13), (16, 30), (33, 23), (30, 61), (62, 45),
@@ -273,7 +273,7 @@ def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, 
     x = ZeroPadding2D(((1, 0), (1, 0)))(x)  # top left half-padding
     x = Conv2D(filters=32, kernel_size=(3,3), strides=(2,2), padding='valid', use_bias=False)(x)
     x = Bottleneck(x, t = 1, fin = 32, fout = 16, n = 1, s = 1)
-    x = Bottleneck(x, t = 6, fin = 16, fout = 24, n =2, s = 2)
+    x = Bottleneck(x, t = 6, fin = 16, fout = 24, n = 2, s = 2)
     x = Bottleneck(x, t = 6, fin = 24, fout = 32, n = 3, s = 2)
     x = Bottleneck(x, t = 6, fin = 32, fout = 64, n = 4, s = 2)
     x = Bottleneck(x, t = 6, fin = 64, fout = 96, n = 3, s = 1)
@@ -281,17 +281,33 @@ def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, 
     x = Bottleneck(x, t = 6, fin = 160, fout = 320, n = 1, s = 1)
 
     x = Conv2D(filters=1280, kernel_size=1, strides=1, padding='same', use_bias=False)(x)
+    x = BatchNormalization()(x)
+    x = ReLU(6.0)(x)
+
+    x_tmp = x
+    x = ZeroPadding2D(1)(x)  
+    x = Conv2D(filters=512, kernel_size=3, strides=1, padding='valid', use_bias=False)(x)
+    x = BatchNormalization()(x)
+    x = ReLU(6.0)(x)
 
     x = ZeroPadding2D(1)(x)  
     x = Conv2D(filters=512, kernel_size=3, strides=1, padding='valid', use_bias=False)(x)
     x = BatchNormalization()(x)
     x = ReLU(6.0)(x)
+    
+    x = ZeroPadding2D(1)(x)  
+    x = Conv2D(filters=1280, kernel_size=3, strides=1, padding='valid', use_bias=False)(x)
+    x = BatchNormalization()(x)
+    x = ReLU(6.0)(x)
+
+    x = Add()([x_tmp, x])
+
     x = Conv2D(filters=len(masks[0]) * (classes + 5), kernel_size=1, strides=1, padding='same', use_bias=False)(x)
     #HEAD FROM ORIGINAL PROJECT
     #x = YoloConv(512, name='yolo_conv_0')(x)
     #output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
     
-    x = tf.keras.layers.Reshape((7, 7, 54))(x)
+    x = tf.keras.layers.Reshape((7, 7, len(masks[0]) * (classes + 5)))(x)
     return tf.keras.Model(inputs, x, name=name)
 
 

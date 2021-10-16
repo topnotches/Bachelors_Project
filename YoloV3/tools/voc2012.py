@@ -32,6 +32,7 @@ def build_example(annotation, class_map):
     classes = []
     classes_text = []
     truncated = []
+	    #if obj['name'] == 'person' or obj['name'] == 'person':
     views = []
     difficult_obj = []
     if 'object' in annotation:

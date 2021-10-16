@@ -129,7 +129,7 @@ def main(_argv):
         
     #for batch, (images, labels) in enumerate(train_dataset):
     #    a = dataset.transform_targets(labels, anchors, anchor_masks, FLAGS.size)
-    #    
+        
     train_dataset = train_dataset.map(lambda x, y: (dataset.transform_images(x, FLAGS.size), dataset.transform_targets(y, anchors, anchor_masks, FLAGS.size)))
     train_dataset = train_dataset.prefetch(
         buffer_size=tf.data.experimental.AUTOTUNE)
