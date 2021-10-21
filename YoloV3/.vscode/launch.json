@@ -5,12 +5,13 @@
     "version": "0.2.0",
     "configurations": [
 
+
         
         {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "args": ["--dataset", "./data/voc2012_train.tfrecord", "--val_dataset", "./data/voc2012_val.tfrecord", "--classes", "./data/voc2012.names", "--num_classes", "1", "--mode", "eager_fit", "--transfer", "none", "--batch_size", "1", "--epochs", "10"],
+            //"args": ["--dataset", "./data/voc2012_train.tfrecord", "--val_dataset", "./data/voc2012_val.tfrecord", "--classes", "./data/voc2012.names", "--num_classes", "1", "--mode", "eager_fit", "--transfer", "none", "--batch_size", "1", "--epochs", "10"],
             "program": "${file}",
             "console": "integratedTerminal"
         }

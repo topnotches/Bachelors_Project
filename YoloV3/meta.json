@@ -1,6 +1,6 @@
 {
     "lib": "libvart-dpu-runner.so",
-    "filename": "JESNET5.xmodel",
+    "filename": "JEEZNUTS.xmodel",
     "kernel": [
         "subgraph_quant_add"
     ],

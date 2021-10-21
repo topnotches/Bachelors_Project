@@ -37,18 +37,18 @@ def build_example(annotation, class_map):
     difficult_obj = []
     if 'object' in annotation:
         for obj in annotation['object']:
-            if obj['name'] == 'person':
-                difficult = bool(int(obj['difficult']))
-                difficult_obj.append(int(difficult))
+        #if obj['name'] == 'person':
+            difficult = bool(int(obj['difficult']))
+            difficult_obj.append(int(difficult))
 
-                xmin.append(float(obj['bndbox']['xmin']) / width)
-                ymin.append(float(obj['bndbox']['ymin']) / height)
-                xmax.append(float(obj['bndbox']['xmax']) / width)
-                ymax.append(float(obj['bndbox']['ymax']) / height)
-                classes_text.append(obj['name'].encode('utf8'))
-                classes.append(class_map[obj['name']])
-                truncated.append(int(obj['truncated']))
-                views.append(obj['pose'].encode('utf8'))
+            xmin.append(float(obj['bndbox']['xmin']) / width)
+            ymin.append(float(obj['bndbox']['ymin']) / height)
+            xmax.append(float(obj['bndbox']['xmax']) / width)
+            ymax.append(float(obj['bndbox']['ymax']) / height)
+            classes_text.append(obj['name'].encode('utf8'))
+            classes.append(class_map[obj['name']])
+            truncated.append(int(obj['truncated']))
+            views.append(obj['pose'].encode('utf8'))
 
     example = tf.train.Example(features=tf.train.Features(feature={
         'image/height': tf.train.Feature(int64_list=tf.train.Int64List(value=[height])),
