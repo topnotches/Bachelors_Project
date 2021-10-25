@@ -7,9 +7,8 @@
 /YoloV3/logs/
 /YoloV3/Untitled.ipynb
 /YoloV3/output.jpg
-/YoloV3/data/voc2012_raw/
-
-/YoloV3/data/fast*
+/YoloV3/data/voc2012_raw
+scene*
 # Created by https://www.gitignore.io/api/python
 # Edit at https://www.gitignore.io/?templates=python
 
