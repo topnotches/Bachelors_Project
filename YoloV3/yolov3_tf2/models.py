@@ -168,8 +168,8 @@ def yolo_boxes(pred, anchors, classes):
         pred, (2, 2, 1, classes), axis=-1)
 
     box_xy = tf.sigmoid(box_xy)
-    objectness = tf.sigmoid(objectness)
-    class_probs = tf.sigmoid(class_probs)
+    objectness = tf.sigmoid(objectness*2)
+    class_probs = tf.sigmoid(class_probs*2)
     pred_box = tf.concat((box_xy, box_wh), axis=-1)  # original xywh for loss
 
     # !!! grid[x][y] == (y, x)
@@ -300,7 +300,6 @@ def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, 
     x = Conv2D(filters=len(masks[0]) * (classes + 5), kernel_size=1, strides=1, padding='same', use_bias=False)(x)
 
     x = BatchNormalization()(x)
-    x = tf.keras.layers.Muliply()([x, tf.constant(2, shape = tf.shape(x)])
     #HEAD FROM ORIGINAL PROJECT
     #x = YoloConv(512, name='yolo_conv_0')(x)
     #output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)

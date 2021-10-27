@@ -1,0 +1,26 @@
+<annotation>
+	<folder>TrainDataSet</folder>
+	<filename>227.jpg</filename>
+	<path>/home/ylw/DeepLearning/spooNN/TrainDataSet/227.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>227</width>
+		<height>227</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>Polyp</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>5</xmin>
+			<ymin>19</ymin>
+			<xmax>89</xmax>
+			<ymax>132</ymax>
+		</bndbox>
+	</object>
+</annotation>
