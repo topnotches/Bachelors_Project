@@ -1,29 +1,124 @@
 
 import sys
+import os
+from imgaug.augmentables.batches import UnnormalizedBatch
+from xml.etree import ElementTree, ElementInclude
+import xml.etree.ElementTree as ET
 
+def getIOU(box1, box2):
 
+    if len(box1) == 4:
+        box1 = [box1[2]-box1[0], box1[3]-box1[1]]
+    else:
+        assert(len(box1) == 2)
+    if len(box2) == 4:
+        box2 = [box2[2]-box2[0], box2[3]-box2[1]]
+    else:
+        assert(len(box2) == 2)
 
-def getAnchors(K, initializers, iterations, bboxes):
+    area1 = box1[0]*box1[1]
+    area2 = box2[0]*box2[1]
+    xy1 = [-box1[0]/2, -box1[1]/2, box1[0]/2, box1[1]/2]
+    xy2 = [-box2[0]/2, -box2[1]/2, box2[0]/2, box2[1]/2]
+    x = [0.0, 0.0]
+    y = [0.0, 0.0]
+    if(xy1[0] > xy2[0]):
+        x[0] = xy1[0]
+    else:
+        x[0] = xy2[0]
+    
+    if(xy1[1] > xy2[1]):
+        y[0] = xy1[1]
+    else:
+        y[0] = xy2[1]
 
+    if(xy1[2] < xy2[2]):
+        x[1] = xy1[2]
+    else:
+        x[1] = xy2[2]
+    
+    if(xy1[3] < xy2[3]):
+        y[1] = xy1[3]
+    else:
+        y[1] = xy2[3]
 
-def loadData(dirLabels):
+    intersection = (x[1]-x[0])*(y[1]-y[0])
+    
+    return intersection/(area1+area2-intersection)
+
+def meanBox(boxes):
+    sumWidth = 0.0
+    sumHeight = 0.0
+    
+    for box in boxes:
+        sumWidth += box[0]
+        sumHeight += box[1]
+    return [sumWidth/len(boxes), sumHeight/len(boxes)]   
+
+def getAnchors(initializers, iterations, bboxes):
+    anchors = initializers
+    K = len(initializers)
+    prev_anchors = []
+    for iter in range(iterations):
+        clusters = [[] for i in range(len(initializers))]
+        cluster_wins = []
+        for _ in range(len(initializers)):
+            cluster_wins.append(0)
+        for box in bboxes:
+            intersection = 0.0
+            index = 0
+            for i, anchor in enumerate(anchors):
+                tmptersec = getIOU(box, anchor)
+                if tmptersec > intersection:
+                    index = i
+                    intersection = tmptersec
+            clusters[index].append(box)
+            cluster_wins[index] += 1
+        prev_prev_anchors = prev_anchors[:]
+        prev_anchors = anchors[:]
+        for i in range(K):
+            if len(clusters[i]) != 0:
+                anchors[i] = meanBox(clusters[i])
+        if prev_anchors == anchors or anchors == prev_prev_anchors:
+            print("Stopping K-means at iteration {}".format(iter))
+            break
+    prop_anchors = []
+    for i in range(K):
+        if cluster_wins[i] != 0:
+            prop_anchors.append(anchors[i])
+    return prop_anchors
+
+def loadBoxes(dirLabels):
     bboxes = []
     for filename in os.listdir(dirLabels):
         tree = ElementTree.parse(dirLabels+"/"+filename)
         root = tree.getroot()
         bboxesImage = []
         for obj in root.findall("object"):
+            
+            size = root.find("size")
+            xMax = float(size.find("width").text)
+            yMax = float(size.find("height").text)
             for bbox in obj.findall("bndbox"):
             
-
-                bboxesImage.append(x1=float(bbox.find("xmin").text),y1=float(bbox.find("ymin").text),x2=float(bbox.find("xmax").text),y2=float(bbox.find("ymax").text)
-        bboxes.append(bboxesImage)
+                
+                bboxes.append([float(bbox.find("xmin").text)/xMax, float(bbox.find("ymin").text)/yMax, float(bbox.find("xmax").text)/xMax, float(bbox.find("ymax").text)/yMax])
+    
     return bboxes
 
 def main():
-    if (len(sys.argv)) != 2: 
+    if (len(sys.argv)) != 4: 
         print("Argument count should actually be 2... dumbass")
+        for arg in sys.argv:
+            print(arg)
         return 1
+    boxes = loadBoxes(sys.argv[1])
+    init = []
+    for i in range(1, int(sys.argv[3])+1):
+        init.append([i/(int(sys.argv[3])+1), i/(int(sys.argv[3])+1)])
+    print(init)
     
+    print(getAnchors(init, int(sys.argv[2]), boxes))
+
 if __name__ == "__main__":
     main()
