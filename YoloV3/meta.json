@@ -1,6 +1,6 @@
 {
     "lib": "libvart-dpu-runner.so",
-    "filename": "TESTNET.xmodel",
+    "filename": "TESTNUTS.xmodel",
     "kernel": [
         "subgraph_quant_add"
     ],
