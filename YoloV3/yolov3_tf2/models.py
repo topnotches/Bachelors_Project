@@ -30,10 +30,9 @@ flags.DEFINE_float('yolo_iou_threshold', 0.4, 'iou threshold')
 flags.DEFINE_float('yolo_score_threshold', 0.1, 'score threshold')
 
 
-yolo_anchors = np.array([(10, 13), (16, 30), (33, 23), (30, 61), (62, 45),
-                         (59, 119), (116, 90), (156, 198), (373, 326), (1,1), (1,1)],
-                        np.float32) / 416
-yolo_anchor_masks = np.array([[0,1,2,3,4,5,6,7,8],[9],[10]])
+yolo_anchors = np.array([(0.25576400598283616, 0.24019630547156284), (0.35265561376996263, 0.4580948319834986), (0.15933161649182945, 0.184352742518816), (0.001, 0.001), (0.001, 0.001)],
+                        np.float32)
+yolo_anchor_masks = np.array([[0,1,2],[3],[4]])
 
 yolo_tiny_anchors = np.array([(10, 14), (23, 27), (37, 58),
                               (81, 82), (135, 169),  (344, 319)],
@@ -168,8 +167,8 @@ def yolo_boxes(pred, anchors, classes):
         pred, (2, 2, 1, classes), axis=-1)
 
     box_xy = tf.sigmoid(box_xy)
-    objectness = tf.sigmoid(objectness*2)
-    class_probs = tf.sigmoid(class_probs*2)
+    objectness = tf.sigmoid(objectness)
+    class_probs = tf.sigmoid(class_probs)
     pred_box = tf.concat((box_xy, box_wh), axis=-1)  # original xywh for loss
 
     # !!! grid[x][y] == (y, x)

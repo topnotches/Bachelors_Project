@@ -1,16 +1,17 @@
 
 import sys
 import os
+import math
 from imgaug.augmentables.batches import UnnormalizedBatch
 from xml.etree import ElementTree, ElementInclude
 import xml.etree.ElementTree as ET
-
 def getIOU(box1, box2):
 
     if len(box1) == 4:
         box1 = [box1[2]-box1[0], box1[3]-box1[1]]
     else:
         assert(len(box1) == 2)
+
     if len(box2) == 4:
         box2 = [box2[2]-box2[0], box2[3]-box2[1]]
     else:
@@ -45,6 +46,32 @@ def getIOU(box1, box2):
     intersection = (x[1]-x[0])*(y[1]-y[0])
     
     return intersection/(area1+area2-intersection)
+
+def getBinCrossLossAndDeviation(anchBox, trueBoxes):
+    listIOU = []
+    sumLoss = 0.0
+    sumIOU  = 0.0
+    meanIOU = 0.0
+    sumL2  = 0.0
+    for trueBox in trueBoxes:
+        IOU = getIOU(trueBox, anchBox)
+        sumLoss += (-math.log10(IOU))
+        listIOU.append(IOU)
+    for IOU in listIOU:
+        sumIOU += IOU
+    meanIOU = sumIOU/len(trueBoxes)
+
+    for IOU in listIOU:
+        sumL2 += (IOU-meanIOU)**2
+    return sumLoss/len(trueBoxes), math.sqrt(sumL2/len(trueBoxes)), meanIOU
+
+
+def getVariance(data, mean):
+    sumIOU = 0.0
+    for trueBox in trueBoxes:
+        sumIOU+=-math.log10(getIOU(trueBox, anchBox))
+    
+    return sumIOU/len(trueBoxes)
 
 def meanBox(boxes):
     sumWidth = 0.0
@@ -83,10 +110,19 @@ def getAnchors(initializers, iterations, bboxes):
             print("Stopping K-means at iteration {}".format(iter))
             break
     prop_anchors = []
+    prop_wins = []
+    prop_loss = []
+    prop_dev = []
+    prop_mean = []
     for i in range(K):
-        if cluster_wins[i] != 0:
+        if cluster_wins[i] > 1:
             prop_anchors.append(anchors[i])
-    return prop_anchors
+            prop_wins.append(cluster_wins[i])
+            loss, deviation, mean = getBinCrossLossAndDeviation(anchors[i], clusters[i])
+            prop_loss.append(loss)
+            prop_dev.append(deviation)
+            prop_mean.append(mean)
+    return prop_anchors, prop_wins, prop_loss, prop_dev, prop_mean
 
 def loadBoxes(dirLabels):
     bboxes = []
@@ -118,7 +154,13 @@ def main():
         init.append([i/(int(sys.argv[3])+1), i/(int(sys.argv[3])+1)])
     print(init)
     
-    print(getAnchors(init, int(sys.argv[2]), boxes))
-
+    get, geet, gurd, gyt, gat = (getAnchors(init, int(sys.argv[2]), boxes))
+    for git, gut in enumerate(get):
+        print("\nANCHOR BOX #{}:".format(git+1))
+        print("box: {}".format(gut))
+        print("wins: {}".format(geet[git]))
+        print("mean: {}".format(gat[git]))
+        print("deviation: {}".format(gyt[git]))
+        print("loss: {}".format(gurd[git]))
 if __name__ == "__main__":
     main()
