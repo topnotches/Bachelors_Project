@@ -8,6 +8,8 @@ from random import randrange
 from imgaug.augmentables.batches import UnnormalizedBatch
 from xml.etree import ElementTree, ElementInclude
 import xml.etree.ElementTree as ET
+
+
 def loadData(dirLabels, dirImages):
     images = []
     bboxes = []
@@ -104,7 +106,6 @@ seq = iaa.Sequential([
 ])
 
 def saveLabels(bboxes, dirLabels, dirImages, name, size):
-    
     root = ET.Element("annotation")
     ET.SubElement(root, "folder").text = dirImages[dirImages.rfind('/')+1:]
     ET.SubElement(root, "filename").text = name + '.png'

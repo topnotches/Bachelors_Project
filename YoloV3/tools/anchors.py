@@ -266,13 +266,11 @@ def main():
         return 1
     boxes = loadBoxes(sys.argv[1])
     results = []
-    for _ in range(int(sys.argv[2])):
+    for _ in range(int(sys.argv[3])):
         init = []
 
 
         for i in range(1, int(sys.argv[2])+1):
-            #init.append([i/(int(sys.argv[3])+1), i/(int(sys.argv[3])+1)])
-            
             init.append(rd.choice(boxes))
         print(init)
         
