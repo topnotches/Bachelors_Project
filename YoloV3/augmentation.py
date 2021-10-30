@@ -20,12 +20,11 @@ def loadData(dirLabels, dirImages):
         bboxesImage = []
         for obj in root.findall("object"):
             for bbox in obj.findall("bndbox"):
-            
-
                 bboxesImage.append(ia.BoundingBox(x1=float(bbox.find("xmin").text),y1=float(bbox.find("ymin").text),x2=float(bbox.find("xmax").text),y2=float(bbox.find("ymax").text)))
         bboxes.append(bboxesImage)
     return images, bboxes
 sometimes = lambda aug: iaa.Sometimes(0.5, aug)
+
 deq = iaa.Sequential(
     [
         # apply the following augmenters to most images
@@ -95,14 +94,13 @@ deq = iaa.Sequential(
 )
 seq = iaa.Sequential([
     
-    iaa.Sometimes(0.4, iaa.GaussianBlur(sigma=(0, 3.0))),
     iaa.Sometimes(0.4, iaa.TranslateX(px=(-20, 20))),
-    iaa.Sometimes(0.4, iaa.Rotate((-90, 90))),
-    iaa.Sometimes(0.4, iaa.AddToBrightness((-30, 30))),
-    iaa.Sometimes(0.4, iaa.Sequential([ iaa.ChangeColorspace(from_colorspace="RGB", to_colorspace="HSV"), iaa.WithChannels(0, iaa.Add((50, 100))), iaa.ChangeColorspace(from_colorspace="HSV", to_colorspace="RGB")])),
+    iaa.Sometimes(0.4, iaa.Rotate((-10, 10))),
+    iaa.Sometimes(0.4, iaa.CropAndPad(percent=(-0.5, 0.0))),
+    iaa.Sometimes(0.4, iaa.AddToBrightness((-10, 10))),
+    iaa.Sometimes(0.4, iaa.Sequential([ iaa.ChangeColorspace(from_colorspace="RGB", to_colorspace="HSV"), iaa.WithChannels(0, iaa.Add((0, 50))), iaa.ChangeColorspace(from_colorspace="HSV", to_colorspace="RGB")])),
     iaa.Sometimes(0.4, iaa.TranslateY(px=(-20, 20)))
 
-    
 ])
 
 def saveLabels(bboxes, dirLabels, dirImages, name, size):

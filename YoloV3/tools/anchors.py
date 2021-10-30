@@ -1,10 +1,12 @@
 
 import sys
 import os
+import random as rd
 import math
 from imgaug.augmentables.batches import UnnormalizedBatch
 from xml.etree import ElementTree, ElementInclude
 import xml.etree.ElementTree as ET
+import multiprocessing as mp
 def getIOU(box1, box2):
 
     if len(box1) == 4:
@@ -55,7 +57,11 @@ def getBinCrossLossAndDeviation(anchBox, trueBoxes):
     sumL2  = 0.0
     for trueBox in trueBoxes:
         IOU = getIOU(trueBox, anchBox)
-        sumLoss += (-math.log10(IOU))
+        if IOU < 0.005:
+            sumLoss += (-math.log10(IOU+0.001))
+        else:
+
+            sumLoss += (-math.log10(IOU))
         listIOU.append(IOU)
     for IOU in listIOU:
         sumIOU += IOU
@@ -91,6 +97,7 @@ def getAnchors(initializers, iterations, bboxes):
         cluster_wins = []
         for _ in range(len(initializers)):
             cluster_wins.append(0)
+        print(iter)
         for box in bboxes:
             intersection = 0.0
             index = 0
@@ -123,6 +130,97 @@ def getAnchors(initializers, iterations, bboxes):
             prop_dev.append(deviation)
             prop_mean.append(mean)
     return prop_anchors, prop_wins, prop_loss, prop_dev, prop_mean
+def getBestCluster(box, anchors, processNumber, dictOfIndices):
+    intersection = 0.0
+    index = 0
+    for i, anchor in enumerate(anchors):
+        tmptersec = getIOU(box, anchor)
+        if tmptersec > intersection:
+            index = i
+            intersection = tmptersec
+    dictOfIndices[processNumber] = index
+def getIOUs(boxes, anchor, processNumber, dictOfIOU):
+    for i, box in enumerate(boxes):
+        dictOfIOU[processNumber][i] = getIOU(box, anchor)
+def meanBoxos(clusters, i, dictos):
+    sumWidth = 0.0
+    sumHeight = 0.0
+    for box in clusters[i]:
+        sumWidth += box[0]
+        sumHeight += box[1]
+    dictos[i] = [sumWidth/len(clusters[i]), sumHeight/len(clusters[i])]   
+
+def getAnchorsMultiprocess(initializers, iterations, bboxes):
+    anchors = initializers
+    K = len(initializers)
+    prev_anchors = []
+    for iter in range(iterations):
+        clusters = [[] for i in range(len(initializers))]
+        cluster_wins = []
+
+        for _ in range(len(initializers)):
+            cluster_wins.append(0)
+
+        print(iter)
+        manager = mp.Manager()
+        dictos = manager.dict()
+        listOfDicts = []
+        for i in range(K):
+            listOfDicts.append(manager.dict())
+
+        jobs = []
+        for i, anchor in enumerate(anchors):
+            p = mp.Process(target = getIOUs, args=(bboxes, anchor, i, listOfDicts))
+            jobs.append(p)
+            p.start()
+
+        for proc in jobs:
+            proc.join()
+
+        for i, box in enumerate(bboxes):
+            tmp = 0.0
+            index = 0
+            for ii in range(len(anchors)):
+                if tmp < listOfDicts[ii][i]:
+                    tmp = listOfDicts[ii][i]
+                    index = ii
+            clusters[index].append(box)
+            cluster_wins[index] += 1
+
+        prev_prev_anchors = prev_anchors[:]
+        prev_anchors = anchors[:]
+
+        jobs = []
+        for i in range(K):
+            if len(clusters[i]) != 0:
+                p = mp.Process(target = meanBoxos, args=(clusters, i, dictos))
+                jobs.append(p)
+                p.start()
+
+        for proc in jobs:
+            proc.join()
+        
+        for i in range(K):
+            if len(clusters[i]) != 0:
+                anchors[i] = dictos[i]
+                
+        if prev_anchors == anchors or anchors == prev_prev_anchors:
+            print("Stopping K-means at iteration {}".format(iter))
+            break
+    prop_anchors = []
+    prop_wins = []
+    prop_loss = []
+    prop_dev = []
+    prop_mean = []
+    for i in range(K):
+        if cluster_wins[i] > 1:
+            prop_anchors.append(anchors[i])
+            prop_wins.append(cluster_wins[i])
+            loss, deviation, mean = getBinCrossLossAndDeviation(anchors[i], clusters[i])
+            prop_loss.append(loss)
+            prop_dev.append(deviation)
+            prop_mean.append(mean)
+    return prop_anchors, prop_wins, prop_loss, prop_dev, prop_mean
 
 def loadBoxes(dirLabels):
     bboxes = []
@@ -138,10 +236,28 @@ def loadBoxes(dirLabels):
             for bbox in obj.findall("bndbox"):
             
                 
-                bboxes.append([float(bbox.find("xmin").text)/xMax, float(bbox.find("ymin").text)/yMax, float(bbox.find("xmax").text)/xMax, float(bbox.find("ymax").text)/yMax])
+                bboxes.append([float(bbox.find("xmax").text)/xMax-float(bbox.find("xmin").text)/xMax, float(bbox.find("ymax").text)/yMax-float(bbox.find("ymin").text)/yMax])
     
     return bboxes
+def getClusterMean(means, count, total):
+    sumOfMeans = 0.0
+    for i, mean in enumerate(means):
+        sumOfMeans += (mean*count[i])/total
+    return sumOfMeans#/len(count)
 
+def getBestClusters(results, boxCount):
+    bestMean = 0.0
+    index = 0
+    for i, result in enumerate(results):
+        tmpMean = getClusterMean(result[4], result[1], boxCount)
+
+        print(result[4])
+        if tmpMean > bestMean:
+            index = i
+            bestMean = tmpMean
+    print(bestMean)
+    return results[index]
+            
 def main():
     if (len(sys.argv)) != 4: 
         print("Argument count should actually be 2... dumbass")
@@ -149,18 +265,25 @@ def main():
             print(arg)
         return 1
     boxes = loadBoxes(sys.argv[1])
-    init = []
-    for i in range(1, int(sys.argv[3])+1):
-        init.append([i/(int(sys.argv[3])+1), i/(int(sys.argv[3])+1)])
-    print(init)
-    
-    get, geet, gurd, gyt, gat = (getAnchors(init, int(sys.argv[2]), boxes))
-    for git, gut in enumerate(get):
-        print("\nANCHOR BOX #{}:".format(git+1))
-        print("box: {}".format(gut))
-        print("wins: {}".format(geet[git]))
-        print("mean: {}".format(gat[git]))
-        print("deviation: {}".format(gyt[git]))
-        print("loss: {}".format(gurd[git]))
+    results = []
+    for _ in range(int(sys.argv[2])):
+        init = []
+
+
+        for i in range(1, int(sys.argv[2])+1):
+            #init.append([i/(int(sys.argv[3])+1), i/(int(sys.argv[3])+1)])
+            
+            init.append(rd.choice(boxes))
+        print(init)
+        
+        results.append(getAnchors(init, 1000, boxes))
+    res_anchors, res_wins, res_loss, res_dev, res_mean = getBestClusters(results, len(boxes))
+    for i, anchor in enumerate(res_anchors):
+        print("\nANCHOR BOX #{}:".format(i+1))
+        print("box: {}".format(anchor))
+        print("wins: {}".format(res_wins[i]))
+        print("mean: {}".format(res_mean[i]))
+        print("deviation: {}".format(res_dev[i]))
+        print("loss: {}".format(res_loss[i]))
 if __name__ == "__main__":
     main()
