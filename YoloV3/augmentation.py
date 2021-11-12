@@ -96,12 +96,12 @@ deq = iaa.Sequential(
 )
 seq = iaa.Sequential([
     
-    iaa.Sometimes(0.4, iaa.TranslateX(px=(-20, 20))),
+    iaa.Sometimes(0.4, iaa.TranslateX(px=(-10, 10))),
     iaa.Sometimes(0.4, iaa.Rotate((-10, 10))),
-    iaa.Sometimes(0.4, iaa.CropAndPad(percent=(-0.5, 0.0))),
+    iaa.Sometimes(0.8, iaa.Resize((0.3, 1.7))),
     iaa.Sometimes(0.4, iaa.AddToBrightness((-10, 10))),
-    iaa.Sometimes(0.4, iaa.Sequential([ iaa.ChangeColorspace(from_colorspace="RGB", to_colorspace="HSV"), iaa.WithChannels(0, iaa.Add((0, 50))), iaa.ChangeColorspace(from_colorspace="HSV", to_colorspace="RGB")])),
-    iaa.Sometimes(0.4, iaa.TranslateY(px=(-20, 20)))
+    iaa.Sometimes(0.4, iaa.MultiplyHueAndSaturation(mul_hue=(0.5, 1.5))),
+    iaa.Sometimes(0.4, iaa.TranslateY(px=(-10, 10)))
 
 ])
 
@@ -165,7 +165,7 @@ def main():
     augmentedBboxes = []
     batchsize = 7
     batchcount = int(len(images)/batchsize)
-    runners = 60
+    runners = 80
 
     batches = [UnnormalizedBatch(images=images[i:i+batchsize], bounding_boxes=bboxes[i:i+batchsize]) for i in range(batchcount)]
     print('STEP 2: Augmenting batches')

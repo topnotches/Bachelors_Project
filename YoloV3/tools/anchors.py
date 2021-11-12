@@ -46,8 +46,11 @@ def getIOU(box1, box2):
         y[1] = xy2[3]
 
     intersection = (x[1]-x[0])*(y[1]-y[0])
-    
-    return intersection/(area1+area2-intersection)
+    denominator = (area1+area2-intersection)
+    if denominator == 0:
+        return 0
+    else:
+        return intersection/(area1+area2-intersection)
 
 def getBinCrossLossAndDeviation(anchBox, trueBoxes):
     listIOU = []
@@ -88,7 +91,7 @@ def meanBox(boxes):
         sumHeight += box[1]
     return [sumWidth/len(boxes), sumHeight/len(boxes)]   
 
-def getAnchors(initializers, iterations, bboxes):
+def getAnchors(initializers, iterations, bboxes, dictIndex, resDict):
     anchors = initializers
     K = len(initializers)
     prev_anchors = []
@@ -97,7 +100,7 @@ def getAnchors(initializers, iterations, bboxes):
         cluster_wins = []
         for _ in range(len(initializers)):
             cluster_wins.append(0)
-        print(iter)
+        #print(iter)
         for box in bboxes:
             intersection = 0.0
             index = 0
@@ -129,7 +132,7 @@ def getAnchors(initializers, iterations, bboxes):
             prop_loss.append(loss)
             prop_dev.append(deviation)
             prop_mean.append(mean)
-    return prop_anchors, prop_wins, prop_loss, prop_dev, prop_mean
+    resDict[dictIndex] = [prop_anchors, prop_wins, prop_loss, prop_dev, prop_mean]
 def getBestCluster(box, anchors, processNumber, dictOfIndices):
     intersection = 0.0
     index = 0
@@ -161,7 +164,7 @@ def getAnchorsMultiprocess(initializers, iterations, bboxes):
         for _ in range(len(initializers)):
             cluster_wins.append(0)
 
-        print(iter)
+        #print(iter)
         manager = mp.Manager()
         dictos = manager.dict()
         listOfDicts = []
@@ -251,11 +254,11 @@ def getBestClusters(results, boxCount):
     for i, result in enumerate(results):
         tmpMean = getClusterMean(result[4], result[1], boxCount)
 
-        print(result[4])
+        #print(result[4])
         if tmpMean > bestMean:
             index = i
             bestMean = tmpMean
-    print(bestMean)
+    #print(bestMean)
     return results[index]
             
 def main():
@@ -266,15 +269,25 @@ def main():
         return 1
     boxes = loadBoxes(sys.argv[1])
     results = []
-    for _ in range(int(sys.argv[3])):
+    jobs = []
+    manager = mp.Manager()
+    resDict = manager.dict()
+    for i in range(int(sys.argv[3])):
         init = []
 
 
-        for i in range(1, int(sys.argv[2])+1):
+        for _ in range(1, int(sys.argv[2])+1):
             init.append(rd.choice(boxes))
-        print(init)
-        
-        results.append(getAnchors(init, 1000, boxes))
+
+        p = mp.Process(target = getAnchors, args=(init, 1000, boxes, i, resDict))
+        jobs.append(p)
+        p.start()
+
+    for proc in jobs:
+        proc.join()
+    results = []
+    for i in range(int(sys.argv[3])):
+        results.append(resDict[i])
     res_anchors, res_wins, res_loss, res_dev, res_mean = getBestClusters(results, len(boxes))
     for i, anchor in enumerate(res_anchors):
         print("\nANCHOR BOX #{}:".format(i+1))

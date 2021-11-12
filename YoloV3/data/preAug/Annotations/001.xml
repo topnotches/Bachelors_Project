@@ -1,7 +1,7 @@
 <annotation>
-	<folder>TrainDataSet</folder>
-	<filename>001.jpg</filename>
-	<path>~/Vitis-AI/Bachelors_Project/YoloV3/data/voc2012_raw/VOCdevkit/VOC2012/JPEGImages/001.jpg</path>
+	<folder>JPEGImages</folder>
+	<filename>001.png</filename>
+	<path>/home/topnotches/Vitis-AI/Bachelors_Project/YoloV3/data/preAug/JPEGImages/001.png</path>
 	<source>
 		<database>Unknown</database>
 	</source>
@@ -14,12 +14,12 @@
 	<object>
 		<name>polyp</name>
 		<pose>Unspecified</pose>
-		<truncated>0</truncated>
+		<truncated>1</truncated>
 		<difficult>0</difficult>
 		<bndbox>
 			<xmin>77</xmin>
-			<ymin>163</ymin>
-			<xmax>123</xmax>
+			<ymin>167</ymin>
+			<xmax>118</xmax>
 			<ymax>227</ymax>
 		</bndbox>
 	</object>

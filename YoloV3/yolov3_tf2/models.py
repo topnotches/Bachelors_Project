@@ -26,13 +26,13 @@ from .utils import broadcast_iou
 
 flags.DEFINE_integer('yolo_max_boxes', 100,
                      'maximum number of boxes per image')
-flags.DEFINE_float('yolo_iou_threshold', 0.4, 'iou threshold')
-flags.DEFINE_float('yolo_score_threshold', 0.1, 'score threshold')
+flags.DEFINE_float('yolo_iou_threshold', 0.5, 'iou threshold')
+flags.DEFINE_float('yolo_score_threshold', 0.5, 'score threshold')
 
 
-yolo_anchors = np.array([(0.25576400598283616, 0.24019630547156284), (0.35265561376996263, 0.4580948319834986), (0.15933161649182945, 0.184352742518816), (0.001, 0.001), (0.001, 0.001)],
+yolo_anchors = np.array([(0.24265872988493556, 0.325556310464008), (0.07243772378858886, 0.09559064417089477), (0.3331548767151216, 0.4985357212777713), (0.1558928749489655, 0.23061110017978922), (0.22221643878259528, 0.18662613099249714), (0.001, 0.001), (0.001, 0.001)],
                         np.float32)
-yolo_anchor_masks = np.array([[0,1,2],[3],[4]])
+yolo_anchor_masks = np.array([[0,1,2,3,4],[5],[6]])
 
 yolo_tiny_anchors = np.array([(10, 14), (23, 27), (37, 58),
                               (81, 82), (135, 169),  (344, 319)],
