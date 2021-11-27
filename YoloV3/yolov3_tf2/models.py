@@ -30,9 +30,12 @@ flags.DEFINE_float('yolo_iou_threshold', 0.5, 'iou threshold')
 flags.DEFINE_float('yolo_score_threshold', 0.5, 'score threshold')
 
 
-yolo_anchors = np.array([(0.24265872988493556, 0.325556310464008), (0.07243772378858886, 0.09559064417089477), (0.3331548767151216, 0.4985357212777713), (0.1558928749489655, 0.23061110017978922), (0.22221643878259528, 0.18662613099249714), (0.001, 0.001), (0.001, 0.001)],
+yolo_anchors = np.array([(0.23551913026451718, 0.32283159910773246),
+      (0.3301928883940777, 0.487984731908737),
+      (0.18882981712257776, 0.20363369724054445),
+      (0.07460299343068891, 0.09748286841560129), (0.001, 0.001), (0.001, 0.001)],
                         np.float32)
-yolo_anchor_masks = np.array([[0,1,2,3,4],[5],[6]])
+yolo_anchor_masks = np.array([[0,1,2,3],[4],[5]])
 
 yolo_tiny_anchors = np.array([(10, 14), (23, 27), (37, 58),
                               (81, 82), (135, 169),  (344, 319)],
@@ -163,12 +166,12 @@ def _meshgrid(n_a, n_b):
 def yolo_boxes(pred, anchors, classes):
     # pred: (batch_size, grid, grid, anchors, (x, y, w, h, obj, ...classes))
     grid_size = tf.shape(pred)[1:3]
-    box_xy, box_wh, objectness, class_probs = tf.split(
-        pred, (2, 2, 1, classes), axis=-1)
+    box_xy, box_wh, objectness = tf.split(
+        pred, (2, 2, 1), axis=-1)
 
     box_xy = tf.sigmoid(box_xy)
     objectness = tf.sigmoid(objectness)
-    class_probs = tf.sigmoid(class_probs)
+    #class_probs = tf.sigmoid(class_probs)
     pred_box = tf.concat((box_xy, box_wh), axis=-1)  # original xywh for loss
 
     # !!! grid[x][y] == (y, x)
@@ -183,7 +186,7 @@ def yolo_boxes(pred, anchors, classes):
     box_x2y2 = box_xy + box_wh / 2
     bbox = tf.concat([box_x1y1, box_x2y2], axis=-1)
 
-    return bbox, objectness, class_probs, pred_box
+    return bbox, objectness, pred_box
 
 
 def yolo_nms(outputs, anchors, masks, classes):
@@ -283,27 +286,15 @@ def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, 
     x = BatchNormalization()(x)
     x = ReLU(6.0)(x)
 
-    x_tmp = x
-    x = ZeroPadding2D(1)(x)  
-    x = Conv2D(filters=512, kernel_size=3, strides=1, padding='valid', use_bias=False)(x)
-    x = BatchNormalization()(x)
-    x = ReLU(6.0)(x)
-    
-    x = ZeroPadding2D(1)(x)  
-    x = Conv2D(filters=1280, kernel_size=3, strides=1, padding='valid', use_bias=False)(x)
-    x = BatchNormalization()(x)
-    x = ReLU(6.0)(x)
 
-    x = Add()([x_tmp, x])
-
-    x = Conv2D(filters=len(masks[0]) * (classes + 5), kernel_size=1, strides=1, padding='same', use_bias=False)(x)
+    x = Conv2D(filters=len(masks[0]) * (+ 5), kernel_size=1, strides=1, padding='same', use_bias=False)(x)
 
     x = BatchNormalization()(x)
     #HEAD FROM ORIGINAL PROJECT
     #x = YoloConv(512, name='yolo_conv_0')(x)
     #output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
     
-    x = tf.keras.layers.Reshape((7, 7, len(masks[0]) * (classes + 5)))(x)
+    x = tf.keras.layers.Reshape((7, 7, len(masks[0]) * (5)))(x)
     return tf.keras.Model(inputs, x, name=name)
 
 
@@ -319,7 +310,7 @@ def YoloV3(size=None, channels=3, anchors=yolo_anchors,
 
     x = MobilenetV2(name='yolo_darknet', masks = masks, anchors = anchors, classes = classes)(x)
             
-    x = tf.keras.layers.Reshape((7, 7, len(masks[0]), classes + 5))(x)
+    x = tf.keras.layers.Reshape((7, 7, len(masks[0]), 5))(x)
     if training:
         return Model(inputs, x, name='yolov3')
 
@@ -360,7 +351,7 @@ def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
     def yolo_loss(y_true, y_pred):
         # 1. transform all pred outputs
         # y_pred: (batch_size, grid, grid, anchors, (x, y, w, h, obj, ...cls))
-        pred_box, pred_obj, pred_class, pred_xywh = yolo_boxes(
+        pred_box, pred_obj, pred_xywh = yolo_boxes(
             y_pred, anchors, classes)
         pred_xy = pred_xywh[..., 0:2]
         pred_wh = pred_xywh[..., 2:4]
@@ -404,18 +395,18 @@ def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
         obj_loss = obj_mask * obj_loss + \
             (1 - obj_mask) * ignore_mask * obj_loss
         # TODO: use binary_crossentropy instead
-        if classes == 1:
-            true_class_idx = tf.one_hot(indices = tf.cast(true_class_idx[...,0], tf.int32), depth = classes, on_value=1.0, off_value=0.0, dtype=tf.float32)
-            class_loss = obj_mask * binary_crossentropy(
-                true_class_idx, pred_class)
-        else:
-            class_loss = obj_mask * sparse_categorical_crossentropy(true_class_idx, pred_class)
+        #if classes == 1:
+        #    true_class_idx = tf.one_hot(indices = tf.cast(true_class_idx[...,0], tf.int32), depth = classes, on_value=1.0, off_value=0.0, dtype=tf.float32)
+        #    class_loss = obj_mask * binary_crossentropy(
+        #        true_class_idx, pred_class)
+        #else:
+        #    class_loss = obj_mask * sparse_categorical_crossentropy(true_class_idx, pred_class)
 
         # 6. sum over (batch, gridx, gridy, anchors) => (batch, 1)
         xy_loss = tf.reduce_sum(xy_loss, axis=(1, 2, 3))
         wh_loss = tf.reduce_sum(wh_loss, axis=(1, 2, 3))
         obj_loss = tf.reduce_sum(obj_loss, axis=(1, 2, 3))
-        class_loss = tf.reduce_sum(class_loss, axis=(1, 2, 3))
+        #class_loss = tf.reduce_sum(class_loss, axis=(1, 2, 3))
 
-        return xy_loss + wh_loss + obj_loss + class_loss
+        return xy_loss + wh_loss + obj_loss
     return yolo_loss

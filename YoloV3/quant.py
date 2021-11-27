@@ -20,7 +20,7 @@ def main(_argv):
     val_dataset = val_dataset.map(lambda x, y: (dataset.transform_images(x, 224), dataset.transform_targets(y, yolo_anchors, yolo_anchor_masks, 224)))
 
     quantizer = vitis_quantize.VitisQuantizer(float_model)
-    quantized_model = quantizer.quantize_model(calib_dataset=val_dataset, calib_batch_size=16, include_fast_ft=True, fast_ft_epochs=15)
+    quantized_model = quantizer.quantize_model(calib_dataset=val_dataset, calib_batch_size=16, include_fast_ft=True, fast_ft_epochs=8)
     print(quantized_model.output_shape)
     quantized_model.save('quantized_model.h5')
 
